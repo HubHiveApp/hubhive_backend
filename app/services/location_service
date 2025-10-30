@@ -1,0 +1,60 @@
+import math
+from app.models.chatroom import Chatroom
+from app.models.event import Event
+from app.database import get_db
+
+class LocationService:
+    @staticmethod
+    def calculate_distance(lat1, lon1, lat2, lon2):
+        """Haversine formula to calculate distance between two points in km"""
+        R = 6371.0  # Earth radius in km
+        
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        
+        a = (math.sin(dlat / 2) ** 2 + 
+             math.cos(math.radians(lat1)) * 
+             math.cos(math.radians(lat2)) * 
+             math.sin(dlon / 2) ** 2)
+        
+        return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
+
+    @staticmethod
+    def get_nearby_chatrooms(lat, lng, max_distance=10):
+        db = get_db()
+        chatrooms = db.query(Chatroom).filter(Chatroom.is_private.is_(False)).all()
+        
+        nearby_rooms = []
+        for room in chatrooms:
+            if room.location and 'latitude' in room.location and 'longitude' in room.location:
+                distance = LocationService.calculate_distance(
+                    lat, lng,
+                    room.location['latitude'],
+                    room.location['longitude']
+                )
+                if distance <= max_distance:
+                    room_dict = room.to_dict()
+                    room_dict['distance_km'] = round(distance, 2)
+                    nearby_rooms.append(room_dict)
+        
+        return sorted(nearby_rooms, key=lambda x: x['distance_km'])
+
+    @staticmethod
+    def get_nearby_events(lat, lng, max_distance=50):
+        db = get_db()
+        events = db.query(Event).filter(Event.is_public.is_(True)).all()
+        
+        nearby_events = []
+        for event in events:
+            if event.location and 'latitude' in event.location and 'longitude' in event.location:
+                distance = LocationService.calculate_distance(
+                    lat, lng,
+                    event.location['latitude'],
+                    event.location['longitude']
+                )
+                if distance <= max_distance:
+                    event_dict = event.to_dict()
+                    event_dict['distance_km'] = round(distance, 2)
+                    nearby_events.append(event_dict)
+        
+        return sorted(nearby_events, key=lambda x: x['distance_km'])
