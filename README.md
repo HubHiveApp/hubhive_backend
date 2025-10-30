@@ -1,6 +1,6 @@
 # HubHive Backend
 
-A Yython-based backend for the HubHive social networking application, providing real-time chat, event management, and location-based services for connecting local communities.
+A Python-based backend for the HubHive social networking application, providing real-time chat, event management, and location-based services for connecting local communities.
 
 ## Features
 
