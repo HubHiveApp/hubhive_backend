@@ -24,6 +24,7 @@ A Python-based backend for the HubHive social networking application, providing 
 - **Migrations**: Flask-Migrate with Alembic
 
 ## Project Structure
+```tree
 hubhive-backend/
 ├── app/
 │ ├── models/ # Database models
@@ -37,3 +38,4 @@ hubhive-backend/
 ├── run.py
 ├── setup_database.py # Database initialization
 └── .env.example
+```
