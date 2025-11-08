@@ -63,7 +63,7 @@ def register():
 def login():
     db = get_db()
     data = request.get_json() or {}
-    email = data.get("email")
+    email = data.get("email").lower()
     password = data.get("password")
 
     if not email or not password:
