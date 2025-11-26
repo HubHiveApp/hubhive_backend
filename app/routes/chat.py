@@ -9,6 +9,7 @@ import math
 
 from app.extensions import socketio
 from flask_socketio import join_room, leave_room, emit
+from app.utils.decorators import socket_jwt_required
 
 chat_bp = Blueprint("chat", __name__)
 
@@ -156,34 +157,40 @@ def get_chatroom(room_id):
 
 # =============================  Socket.IO  ================================= #
 @socketio.on("connect")
-def _sio_connect():
-    print("Client connected")
+@socket_jwt_required
+def _sio_connect(auth=None, user_id=None, user=None):
+    # `auth` can be a dict from client with `{ token }`
+    # Decorator validates JWT and provides `user_id`/`user`
+    print("Client connected (user)", user_id)
 
 
 @socketio.on("disconnect")
-def _sio_disconnect():
-    print("Client disconnected")
+@socket_jwt_required
+def _sio_disconnect(data=None, user_id=None, user=None):
+    print("Client disconnected (user)", user_id)
 
 
 @socketio.on("join_room")
-def _sio_join(data):
+@socket_jwt_required
+def _sio_join(data, user_id=None, user=None):
     room_id = data.get("chatroom_id")
     join_room(str(room_id))
     print("Socket joined room", room_id)
 
 
 @socketio.on("leave_room")
-def _sio_leave(data):
+@socket_jwt_required
+def _sio_leave(data, user_id=None, user=None):
     room_id = data.get("chatroom_id")
     leave_room(str(room_id))
     print("Socket left room", room_id)
 
 
 @socketio.on("send_message")
-def _sio_send(data):
+@socket_jwt_required
+def _sio_send(data, user_id=None, user=None):
     db = get_db()
     room_id = data.get("chatroom_id")
-    user_id = data.get("user_id")
     content = (data.get("content") or "").strip()
 
     if not content:
@@ -191,7 +198,7 @@ def _sio_send(data):
         return
 
     room = db.query(Chatroom).get(room_id)
-    user = db.query(User).get(user_id)
+    # `user_id` and `user` come from validated JWT
     if not room or not user:
         emit("error", {"error": "Invalid chatroom or user"})
         return
