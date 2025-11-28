@@ -8,7 +8,7 @@ class AuthService:
     def register_user(data):
         db = get_db()
         
-        # Validation
+        #Validation
         if not validate_email(data.get("email")):
             return None, "Invalid email format"
         if not validate_password(data.get("password")):
@@ -26,6 +26,10 @@ class AuthService:
         user = User(
             email=data["email"],
             username=data["username"],
+            
+            # NEW
+            display_name=data.get("display_name") or data["username"],
+            
             user_type=data.get("user_type", "regular"),
             location=data.get("location", {}),
             bio=data.get("bio", ""),
@@ -68,7 +72,7 @@ class AuthService:
             user.username = new_username
         
         # Update other fields
-        update_fields = ["bio", "location", "profile_picture"]
+        update_fields = ["bio", "location", "profile_picture", "display_name"]    #added display_name here
         for field in update_fields:
             if field in data:
                 setattr(user, field, data[field])
