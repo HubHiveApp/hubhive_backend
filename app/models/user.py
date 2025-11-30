@@ -10,8 +10,6 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     username = db.Column(db.String(100), nullable=False)
 
-    display_name = db.Column(db.String(100))      #updated
-
     bio             = db.Column(db.Text)
     profile_picture = db.Column(db.String(500))
     user_type       = db.Column(db.String(50), default="regular")  # regular|business|admin
@@ -33,7 +31,6 @@ class User(db.Model):
             "id": self.id,
             "email": self.email,
             "username": self.username,
-            "display_name": self.display_name or self.username,        #new line
             "bio": self.bio,
             "profile_picture": self.profile_picture,
             "user_type": self.user_type,
