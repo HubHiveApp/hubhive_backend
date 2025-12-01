@@ -80,6 +80,9 @@ def create_chatroom():
     room.participants.append(creator)
     db.commit()
 
+    db.refresh(creator)
+    db.refresh(room)
+
     return jsonify(message="Chatroom created", chatroom=room.to_dict()), 201
 
 
@@ -197,10 +200,11 @@ def _sio_leave(data, user_id=None, user=None):
     db = get_db()
     room = db.query(Chatroom).get(room_id)
     user = db.query(User).get(user_id)
-    room.participants.remove(user)
+    if room.created_by != user_id:
+        room.participants.remove(user)
 
-    db.commit()
-    db.refresh()
+        db.commit()
+        db.refresh(room)
 
     print("Socket left room", room_id)
 
