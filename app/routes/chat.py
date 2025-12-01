@@ -102,6 +102,7 @@ def join_chatroom(room_id):
             return jsonify(error="Chatroom is full"), 400
         room.participants.append(user)
         db.commit()
+        db.refresh(room)  # Refresh to get updated participant_count
 
     return jsonify(message="Joined chatroom", chatroom=room.to_dict()), 200
 
@@ -192,6 +193,15 @@ def _sio_join(data, user_id=None, user=None):
 def _sio_leave(data, user_id=None, user=None):
     room_id = data.get("chatroom_id")
     leave_room(str(room_id))
+
+    db = get_db()
+    room = db.query(Chatroom).get(room_id)
+    user = db.query(User).get(user_id)
+    room.participants.remove(user)
+
+    db.commit()
+    db.refresh()
+
     print("Socket left room", room_id)
 
 
