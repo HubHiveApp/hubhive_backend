@@ -1,6 +1,7 @@
 # app/routes/auth.py
 import os
 import hashlib
+import werkzeug.utils
 
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import (
@@ -98,8 +99,8 @@ def get_profile():
     if not user:
         return jsonify(error="User not found"), 404
     to_return = user.to_dict()
-    to_return['profile_picture'] = f"static/avatars/{to_return['profile_picture']}"
-    print(to_return['profile_picture'])
+    if to_return.get('profile_picture'):
+        to_return['profile_picture'] = f"static/avatars/{to_return['profile_picture']}"
     return jsonify(user=to_return), 200
 
 # ---------------------------------------------------------------------------
@@ -108,15 +109,25 @@ def get_profile():
 @auth_bp.get("/profile/picture/hash")
 @jwt_required()
 def get_profile_picture_hash():
+    hasher = hashlib.sha256()
     db = get_db()
     user_id = get_jwt_identity()
     user = db.query(User).get(int(user_id))
-    file_loc = os.path.join(current_app.config["AVATAR_UPLOAD_FOLDER"], user.profile_picture)
-    profile_picture = open(file_loc, 'rb')
-    hasher = hashlib.sha256()
-    hasher.update(profile_picture.read())
-    return jsonify(hash=hasher.hexdigest())
+    if not user or not getattr(user, "profile_picture", None):
+        return jsonify(error="No profile picture set for this user"), 404
+    file_loc = os.path.join(
+        current_app.config["AVATAR_UPLOAD_FOLDER"],
+        werkzeug.utils.secure_filename(user.profile_picture)
+    )
+    try:
+        with open(file_loc, 'rb') as profile_picture:
+            hasher.update(profile_picture.read())
+    except FileNotFoundError:
+        return jsonify(error="Profile picture file not found"), 404
+    except PermissionError:
+        return jsonify(error="Permission denied when accessing profile picture"), 403
 
+    return jsonify(hash=hasher.hexdigest()), 200
 # ---------------------------------------------------------------------------
 # Update profile
 # ---------------------------------------------------------------------------
@@ -175,7 +186,7 @@ def upload_profile_picture():
     # build filename + path
     upload_folder = current_app.config["AVATAR_UPLOAD_FOLDER"]
     os.makedirs(upload_folder, exist_ok=True)  # just in case
-    filename = f"{user.id}.jpg"   # normalize to .jpg for now
+    filename = werkzeug.utils.secure_filename(f"{user.id}.jpg")   # normalize to .jpg for now
     filepath = os.path.join(upload_folder, filename)
 
     # save the file
