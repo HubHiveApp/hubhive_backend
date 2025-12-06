@@ -13,7 +13,7 @@ class Payment(db.Model):
     payment_method = db.Column(db.String(100))
     stripe_payment_intent_id = db.Column(db.String(255))
     description = db.Column(db.Text)
-    metadata    = db.Column(db.JSON)
+    #metadata    = db.Column(db.JSON)
 
     created_at = db.Column(db.DateTime(timezone=True), server_default=func.now())
     updated_at = db.Column(db.DateTime(timezone=True), onupdate=func.now())
