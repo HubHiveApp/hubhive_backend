@@ -1,5 +1,7 @@
 # app/routes/auth.py
-from flask import Blueprint, request, jsonify
+import os
+
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import (
     create_access_token,
     jwt_required,
@@ -129,3 +131,43 @@ def update_profile():
 
     db.commit()
     return jsonify(message="Profile updated successfully", user=user.to_dict()), 200
+
+# ---------------------------------------------------------------------------
+# Upload profile picture (file upload)
+# ---------------------------------------------------------------------------
+@auth_bp.post("/profile/picture")
+@jwt_required()
+def upload_profile_picture():
+    db = get_db()
+    user_id = get_jwt_identity()
+    user = db.query(User).get(int(user_id))
+    if not user:
+        return jsonify(error="User not found"), 404
+
+    # "file" should be the key used in FormData on the frontend
+    file = request.files.get("file")
+    if not file:
+        return jsonify(error="No file uploaded"), 400
+
+    # basic type validation
+    allowed_types = ("image/jpeg", "image/png", "image/webp")
+    if file.mimetype not in allowed_types:
+        return jsonify(error="Invalid file type. Use JPG, PNG, or WebP."), 400
+
+    # build filename + path
+    upload_folder = current_app.config["AVATAR_UPLOAD_FOLDER"]
+    os.makedirs(upload_folder, exist_ok=True)  # just in case
+    filename = f"{user.id}.jpg"   # normalize to .jpg for now
+    filepath = os.path.join(upload_folder, filename)
+
+    # save the file
+    file.save(filepath)
+
+    # store the URL path in DB (relative URL served by /static/avatars/...)
+    user.profile_picture = f"/static/avatars/{filename}"
+    db.commit()
+
+    return jsonify(
+        message="Profile picture updated successfully",
+        user=user.to_dict(),
+    ), 200
