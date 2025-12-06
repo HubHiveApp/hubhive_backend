@@ -1,5 +1,6 @@
 # app/routes/auth.py
 import os
+import hashlib
 
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import (
@@ -96,8 +97,25 @@ def get_profile():
     user = db.query(User).get(int(user_id))
     if not user:
         return jsonify(error="User not found"), 404
-    return jsonify(user=user.to_dict()), 200
+    to_return = user.to_dict()
+    to_return['profile_picture'] = f"static/avatars/{to_return['profile_picture']}"
+    print(to_return['profile_picture'])
+    return jsonify(user=to_return), 200
 
+# ---------------------------------------------------------------------------
+# Get current profile picture hash
+# ---------------------------------------------------------------------------
+@auth_bp.get("/profile/picture/hash")
+@jwt_required()
+def get_profile_picture_hash():
+    db = get_db()
+    user_id = get_jwt_identity()
+    user = db.query(User).get(int(user_id))
+    file_loc = os.path.join(current_app.config["AVATAR_UPLOAD_FOLDER"], user.profile_picture)
+    profile_picture = open(file_loc, 'rb')
+    hasher = hashlib.sha256()
+    hasher.update(profile_picture.read())
+    return jsonify(hash=hasher.hexdigest())
 
 # ---------------------------------------------------------------------------
 # Update profile
@@ -164,7 +182,7 @@ def upload_profile_picture():
     file.save(filepath)
 
     # store the URL path in DB (relative URL served by /static/avatars/...)
-    user.profile_picture = f"/static/avatars/{filename}"
+    user.profile_picture = filename
     db.commit()
 
     return jsonify(
