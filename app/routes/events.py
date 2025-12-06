@@ -23,7 +23,7 @@ def _distance_km(lat1, lon1, lat2, lon2):
 
 
 # ---------------------------------------------------------------------------
-# Create event  (business accounts only)
+# Create event  (business accounts or admin only)
 # ---------------------------------------------------------------------------
 @events_bp.post("/")
 @jwt_required()
