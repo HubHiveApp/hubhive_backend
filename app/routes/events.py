@@ -36,8 +36,8 @@ def create_event():
         return jsonify(error="Title and event_date are required"), 400
 
     user = db.query(User).get(user_id)
-    if user.user_type != "business":
-        return jsonify(error="Only business accounts can create events"), 403
+    if user.user_type not in ("business", "admin"):
+        return jsonify(error="Only business/admin accounts can create events"), 403
 
     try:
         event_dt = datetime.fromisoformat(data["event_date"].replace("Z", "+00:00"))
