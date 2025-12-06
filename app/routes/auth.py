@@ -63,6 +63,7 @@ def register():
 def login():
     db = get_db()
     data = request.get_json() or {}
+    username = data.get("email")
     email = data.get("email").lower()
     password = data.get("password")
 
@@ -70,6 +71,10 @@ def login():
         return jsonify(error="Email and password are required"), 400
 
     user = db.query(User).filter_by(email=email).first()
+
+    if not user:
+        user = db.query(User).filter_by(username=username).first()
+
     if not user or not user.verify_password(password):
         return jsonify(error="Invalid credentials"), 401
     if not user.is_active:
