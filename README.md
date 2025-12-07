@@ -38,7 +38,11 @@ A Python-based backend for the HubHive social networking application, providing 
 1. Run the setup database script (first time only).
 
     `python setup_database.py`
-1. Start the actual backend.
+
+1. Pull any potential database updates and update the database (if code was updated).
+
+    `alembic upgrade head`
+2. Start the actual backend.
 
     `python run.py`
 
