@@ -168,7 +168,7 @@ def update_profile():
         user.profile_picture = data["profile_picture"]
     # allow updating display_name
     if "display_name" in data:
-        user.display_name = data["display_name]
+        user.display_name = data["display_name"]
 
     db.commit()
     return jsonify(message="Profile updated successfully", user=user.to_dict()), 200

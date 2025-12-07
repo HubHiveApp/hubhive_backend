@@ -10,6 +10,8 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable=False)
     username = db.Column(db.String(100), unique=True, index=True, nullable=False)
 
+    display_name = db.Column(db.String(100))
+
     bio             = db.Column(db.Text)
     profile_picture = db.Column(db.String(500))
     user_type       = db.Column(db.String(50), default="regular")  # regular|business|admin
