@@ -27,7 +27,7 @@ def _distance_km(lat1, lon1, lat2, lon2):
 
 
 # ---------------------------------------------------------------------------
-# Create event  (business accounts only)
+# Create event  (business accounts or admin only)
 # ---------------------------------------------------------------------------
 @events_bp.post("/")
 @jwt_required()
@@ -44,12 +44,9 @@ def create_event():
         )
         return jsonify(error="Title and event_date are required"), 400
 
-    user = db.query(User).get(user_id)
-    if user.user_type != "business":
-        logger.warning(
-            "User %s is not a business account but tried to create an event", user_id
-        )
-        return jsonify(error="Only business accounts can create events"), 403
+    user = db.query(User).get(int(user_id))   #to be safe if user is missing and restrict by user_type
+    if user.user_type not in ("business", "admin"):
+        return jsonify(error="Only business/admin accounts can create events"), 403
 
     try:
         event_dt = datetime.fromisoformat(
@@ -66,7 +63,7 @@ def create_event():
     event = Event(
         title=data["title"],
         description=data.get("description", ""),
-        business_id=user_id,
+        business_id=user_id,     #busines_id is the *creating* business/admin user
         location=data.get("location", {}),
         event_date=event_dt,
         max_attendees=data.get("max_attendees"),
@@ -160,11 +157,9 @@ def update_event(event_id):
     if not event:
         logger.warning("User %s tried to update non-existent event %s", user_id, event_id)
         return jsonify(error="Event not found"), 404
-    if event.business_id != user_id:
-        logger.warning(
-            "User %s is not owner of event %s and attempted update", user_id, event_id
-        )
+    if not (user.user_type == "admin" or event.business_id == user.id):  #this will allow only if this business owns the event or is global admin
         return jsonify(error="Not authorized"), 403
+
 
     data = request.get_json() or {}
     logger.info("Updating event %s with data=%s", event_id, data)
@@ -215,10 +210,7 @@ def delete_event(event_id):
     if not event:
         logger.warning("User %s tried to delete non-existent event %s", user_id, event_id)
         return jsonify(error="Event not found"), 404
-    if event.business_id != user_id:
-        logger.warning(
-            "User %s is not owner of event %s and attempted delete", user_id, event_id
-        )
+    if not (user.user_type == "admin" or event.business_id == user.id):  #same owner or admin rule as update
         return jsonify(error="Not authorized"), 403
 
     db.delete(event)
