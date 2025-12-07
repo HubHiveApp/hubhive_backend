@@ -38,6 +38,10 @@ def register():
     user = User(
         email=data["email"],
         username=data["username"],
+        
+        #set display_name
+        display_name = data.get("display_name") or data["username"],
+        
         user_type=data.get("user_type", "regular"),
         location=data.get("location", {}),
         bio=data.get("bio", ""),
@@ -126,6 +130,9 @@ def update_profile():
         user.location = data["location"]
     if "profile_picture" in data:
         user.profile_picture = data["profile_picture"]
+    # allow updating display_name
+    if "display_name" in data:
+        user.display_name = data["display_name]
 
     db.commit()
     return jsonify(message="Profile updated successfully", user=user.to_dict()), 200

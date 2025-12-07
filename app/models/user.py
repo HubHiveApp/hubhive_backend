@@ -33,7 +33,7 @@ class User(db.Model):
             "id": self.id,
             "email": self.email,
             "username": self.username,
-            "display_name": self.display_name or self.username,        #new line
+            "display_name": self.display_name, #user.to_dict() will now return a display_name field
             "bio": self.bio,
             "profile_picture": self.profile_picture,
             "user_type": self.user_type,
