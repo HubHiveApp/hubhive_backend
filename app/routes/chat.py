@@ -80,6 +80,9 @@ def create_chatroom():
     room.participants.append(creator)
     db.commit()
 
+    db.refresh(creator)
+    db.refresh(room)
+
     return jsonify(message="Chatroom created", chatroom=room.to_dict()), 201
 
 
@@ -102,6 +105,7 @@ def join_chatroom(room_id):
             return jsonify(error="Chatroom is full"), 400
         room.participants.append(user)
         db.commit()
+        db.refresh(room)  # Refresh to get updated participant_count
 
     return jsonify(message="Joined chatroom", chatroom=room.to_dict()), 200
 
@@ -133,7 +137,16 @@ def get_messages(room_id):
         .limit(limit)
         .all()
     )
-    return jsonify(messages=[m.to_dict() for m in reversed(msgs)]), 200
+    
+    # Replace username with "You" for current user's messages
+    messages_data = []
+    for m in reversed(msgs):
+        msg_dict = m.to_dict()
+        if m.user_id == int(user_id):
+            msg_dict['username'] = 'You'
+        messages_data.append(msg_dict)
+    
+    return jsonify(messages=messages_data), 200
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +196,16 @@ def _sio_join(data, user_id=None, user=None):
 def _sio_leave(data, user_id=None, user=None):
     room_id = data.get("chatroom_id")
     leave_room(str(room_id))
+
+    db = get_db()
+    room = db.query(Chatroom).get(room_id)
+    user = db.query(User).get(user_id)
+    if room.created_by != user_id:
+        room.participants.remove(user)
+
+        db.commit()
+        db.refresh(room)
+
     print("Socket left room", room_id)
 
 
@@ -217,4 +240,5 @@ def _sio_send(data, user_id=None, user=None):
     db.add(msg)
     db.commit()
 
-    emit("new_message", {"message": msg.to_dict()}, room=str(room_id))
+    # Broadcast to room but skip the sender (they already see their message)
+    emit("new_message", {"message": msg.to_dict()}, room=str(room_id), include_self=False)

@@ -1,5 +1,9 @@
 # app/routes/auth.py
-from flask import Blueprint, request, jsonify
+import os
+import hashlib
+import werkzeug.utils
+
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import (
     create_access_token,
     jwt_required,
@@ -67,6 +71,7 @@ def register():
 def login():
     db = get_db()
     data = request.get_json() or {}
+    username = data.get("email")
     email = data.get("email").lower()
     password = data.get("password")
 
@@ -74,6 +79,10 @@ def login():
         return jsonify(error="Email and password are required"), 400
 
     user = db.query(User).filter_by(email=email).first()
+
+    if not user:
+        user = db.query(User).filter_by(username=username).first()
+
     if not user or not user.verify_password(password):
         return jsonify(error="Invalid credentials"), 401
     if not user.is_active:
@@ -98,9 +107,36 @@ def get_profile():
     user = db.query(User).get(int(user_id))
     if not user:
         return jsonify(error="User not found"), 404
-    return jsonify(user=user.to_dict()), 200
+    to_return = user.to_dict()
+    if to_return.get('profile_picture'):
+        to_return['profile_picture'] = f"static/avatars/{to_return['profile_picture']}"
+    return jsonify(user=to_return), 200
 
+# ---------------------------------------------------------------------------
+# Get current profile picture hash
+# ---------------------------------------------------------------------------
+@auth_bp.get("/profile/picture/hash")
+@jwt_required()
+def get_profile_picture_hash():
+    hasher = hashlib.sha256()
+    db = get_db()
+    user_id = get_jwt_identity()
+    user = db.query(User).get(int(user_id))
+    if not user or not getattr(user, "profile_picture", None):
+        return jsonify(error="No profile picture set for this user"), 404
+    file_loc = os.path.join(
+        current_app.config["AVATAR_UPLOAD_FOLDER"],
+        werkzeug.utils.secure_filename(user.profile_picture)
+    )
+    try:
+        with open(file_loc, 'rb') as profile_picture:
+            hasher.update(profile_picture.read())
+    except FileNotFoundError:
+        return jsonify(error="Profile picture file not found"), 404
+    except PermissionError:
+        return jsonify(error="Permission denied when accessing profile picture"), 403
 
+    return jsonify(hash=hasher.hexdigest()), 200
 # ---------------------------------------------------------------------------
 # Update profile
 # ---------------------------------------------------------------------------
@@ -136,3 +172,43 @@ def update_profile():
 
     db.commit()
     return jsonify(message="Profile updated successfully", user=user.to_dict()), 200
+
+# ---------------------------------------------------------------------------
+# Upload profile picture (file upload)
+# ---------------------------------------------------------------------------
+@auth_bp.post("/profile/picture")
+@jwt_required()
+def upload_profile_picture():
+    db = get_db()
+    user_id = get_jwt_identity()
+    user = db.query(User).get(int(user_id))
+    if not user:
+        return jsonify(error="User not found"), 404
+
+    # "file" should be the key used in FormData on the frontend
+    file = request.files.get("file")
+    if not file:
+        return jsonify(error="No file uploaded"), 400
+
+    # basic type validation
+    allowed_types = ("image/jpeg", "image/png", "image/webp")
+    if file.mimetype not in allowed_types:
+        return jsonify(error="Invalid file type. Use JPG, PNG, or WebP."), 400
+
+    # build filename + path
+    upload_folder = current_app.config["AVATAR_UPLOAD_FOLDER"]
+    os.makedirs(upload_folder, exist_ok=True)  # just in case
+    filename = werkzeug.utils.secure_filename(f"{user.id}.jpg")   # normalize to .jpg for now
+    filepath = os.path.join(upload_folder, filename)
+
+    # save the file
+    file.save(filepath)
+
+    # store the URL path in DB (relative URL served by /static/avatars/...)
+    user.profile_picture = filename
+    db.commit()
+
+    return jsonify(
+        message="Profile picture updated successfully",
+        user=user.to_dict(),
+    ), 200

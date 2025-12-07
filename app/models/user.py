@@ -8,9 +8,7 @@ class User(db.Model):
     id       = db.Column(db.Integer, primary_key=True)
     email    = db.Column(db.String(255), unique=True, index=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
-    username = db.Column(db.String(100), nullable=False)
-
-    display_name = db.Column(db.String(100))      #updated
+    username = db.Column(db.String(100), unique=True, index=True, nullable=False)
 
     bio             = db.Column(db.Text)
     profile_picture = db.Column(db.String(500))

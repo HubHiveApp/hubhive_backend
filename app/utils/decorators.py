@@ -71,14 +71,13 @@ def socket_jwt_required(fn):
 
         token = None
 
-        # 1) Try payload dict from first positional arg
+        # 1) Try payload dict from first positional arg (for regular events like send_message)
         if args and isinstance(args[0], dict):
             token = args[0].get("token") or args[0].get("access_token")
 
-        # 2) Try connect auth payload (handlers may pass it as first arg)
-        if token is None and args and isinstance(args[0], (str, bytes)):
-            # unlikely, but keep placeholder
-            pass
+        # 2) Try connect auth payload - Socket.IO passes auth as a keyword argument
+        if token is None and "auth" in kwargs and isinstance(kwargs.get("auth"), dict):
+            token = kwargs["auth"].get("token") or kwargs["auth"].get("access_token")
 
         # 3) Try query string (e.g., ws URL: /socket.io/?token=...)
         if token is None:
@@ -91,8 +90,8 @@ def socket_jwt_required(fn):
         try:
             decoded = decode_token(token)
             user_id = decoded.get("sub") or decoded.get("identity")
-        except Exception:
-            emit("error", {"error": "Unauthorized: invalid token"})
+        except Exception as e:
+            emit("error", {"error": f"Unauthorized: invalid token - {str(e)}"})
             return
 
         if not user_id:
