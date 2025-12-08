@@ -39,7 +39,7 @@ def setup_database():
                     username="admin",
                     user_type="admin",
                     bio="System Administrator",
-                    location={"latitude": 40.7282, "longitude": -73.7949, "address": "NYU"}
+                    location={"latitude": 40.6932, "longitude": -73.9873, "address": "370 Jay St"}
                 )
                 admin.set_password("admin123")
                 db.session.add(admin)
@@ -57,7 +57,7 @@ def setup_database():
                     username="nyucoffee",
                     user_type="business",
                     bio="Best coffee near NYU!",
-                    location={"latitude": 40.7291, "longitude": -73.9965, "address": "123 University Pl"}
+                    location={"latitude": 40.6932, "longitude": -73.9873, "address": "370 Jay St"}
                 )
                 business.set_password("business123")
                 db.session.add(business)
