@@ -39,5 +39,10 @@ def create_app():
     @app.route("/static/avatars/<path:filename>")
     def serve_avatar(filename):
         return send_from_directory(app.config["AVATAR_UPLOAD_FOLDER"], filename)
+    
+    # Health check endpoint
+    @app.route("/hc")
+    def health_check():
+        return {"status": "healthy", "service": "hubhive-backend"}, 200
 
     return app
