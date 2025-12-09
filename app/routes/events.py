@@ -100,7 +100,7 @@ def get_events():
         cat,
     )
 
-    query = db.query(Event).filter(Event.is_public.is_(True))
+    query = db.query(Event).filter(Event.is_public.is_(True)).order_by(Event.event_date)
     if cat:
         query = query.filter(Event.category == cat)
 
